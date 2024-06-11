@@ -9,6 +9,8 @@
 
 ## Overview
 
+https://servirglobal.net/news/managing-fire-risk-amazon-ahead-el-nino-year
+
 This repository contains the code and data for the research project titled [Project Title]. The project aims to investigate [brief description of the research objectives and goals].
 
 ## Installation
