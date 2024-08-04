@@ -10,17 +10,23 @@ app = Dash(__name__)
 
 # %%
 # Incorporate data
-ds = xr.open_dataset("/Users/kris/amazonforcast/data/forecast/combined_mean")
+ds_location = r"C:\Users\Kris\Documents\amazonforcast\data\prakrut\output\LIS_HIST_Forecast_June_02_to_05_mean.nc"
+ds = xr.open_dataset(ds_location)
 
 # %%
 ds
 
 # %%
-rainf = ds['Rainf_tavg']
+
+# define key elements from the dataset
 time = ds['time']
 longitude = ds['lon']
 latitude = ds['lat']
-rainf.isel(time = 3)
+
+# list of variables in the data set
+list_of_variables = ['Rainf_tavg','SoilMoist_inst',
+                     'Qs_tavg','Evap_tavg','SoilTemp_inst','Qair_f_tavg'] 
+
 # %%
 # Plotly graphs
 #fig = go.Figure(data=[go.Heatmap(z = rainf.isel(time = 0),  x=ds['east_west'].values, y=ds['north_south'].values)])
@@ -32,9 +38,18 @@ rainf.isel(time = 3)
 # %%
 # App layout
 app.layout = html.Div([
-    html.Div(children='Mapping - Precipitation Forecast Data'),
+    html.H1(children='Mapping - Forecast Data'),
     html.Hr(),
     dcc.Slider(0, 3, step=4, value=0, marks={0: '2024-06-02', 1:'2024-06-03', 2:'2024-06-04', 3:'2024-06-05'}, id='time_index'),
+    html.H2(children='Select your variable below'),
+    dcc.RadioItems(options=list_of_variables, value='Rainf_tavg', id='var-selector'),
+    html.H2(children='Depth'),
+    dcc.Dropdown(id='profile-selector', className='',
+        options=[{'label': '0-10cm', 'value': '0'}, {'label': '10-40cm', 'value': '1' }, 
+                 {'label': '40-100cm', 'value': '2'}, {'label': '100-200cm', 'value': '3'}],
+        value='0',
+        placeholder='0'
+    ),
     html.Hr(),
     dcc.Graph(id='graph1')
 ])
@@ -43,23 +58,23 @@ app.layout = html.Div([
 # Add controls to build the interaction
 @callback(
     Output(component_id='graph1', component_property='figure'),
-    Input(component_id='time_index', component_property='value')
+    Input(component_id='time_index', component_property='value'),
+    Input(component_id='var-selector', component_property='value')
 )
-def update_graph(time_index):
-    # dff = df[df.country.isin(['Albania', 'Canada', 'Austria', 'Angola', 'Bahrain', 'Argentina'])]
-    # fig = px.histogram(dff, x='continent', y=col_chosen, histfunc='avg', pattern_shape='country', labels={"country": "Countries"})
-    fig = go.Figure(data=[go.Heatmap(z = rainf.isel(time = time_index),  x=ds['east_west'].values, y=ds['north_south'].values)])
+def update_graph(time_index, variable):
+    selected_var = ds[variable]
     # Plotly graphs
-    fig = go.Figure(data=[
-    go.Heatmap(z = rainf.isel(time = time_index),  x=ds['east_west'].values, y=ds['north_south'].values)])
+    fig = go.Figure(data=[go.Heatmap(z = selected_var.isel(time = time_index),  x=ds['east_west'].values, y=ds['north_south'].values)])
     # Add titles and labels
     fig.update_layout(
-        title='Rainf_tavg',
+        title=f'{variable}',
         xaxis_title='Longitude',
         yaxis_title='Latitude',
         height = 800,
         width = 1000)
     return fig
+
+
 
 # %%
 # Run the app
