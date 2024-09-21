@@ -62,54 +62,17 @@ app.layout = html.Div([
 
 def update_graph(time_index, variable, profile_index):
     # Print statements for debugging purposes
-    print(f"selected variable is {variable}")
-    print(f"Time Index: {time_index}, Profile Index: {profile_index}")
-    print(f"Dimensions of selected variable{dataset[variable].dims}")
-
-    # Ensure the selected indices are within bounds
-    var_dims = dataset[variable].dims
-    var_sizes = dataset[variable].sizes
-    print(f"Shape of the selected variable: {var_sizes}")
-
-    if 'SoilMoist_profiles' in var_dims:
-        if profile_index >= var_sizes['SoilMoist_profiles']:
-            raise IndexError('Profile index out of bounds')
+    ## print(f"selected variable is {variable}")
+    ## print(f"Time Index: {time_index}, Profile Index: {profile_index}")
+    ## print(f"Dimensions of selected variable{dataset[variable].dims}")
+    selected_var = dataset[variable]
+    if variable == 'SoilMoist_inst': # if user select soil moisture
+         fig = go.Figure(data=[go.Heatmap(z = selected_var.isel(time = time_index, SoilMoist_profiles = int(profile_index)),  x=longitude, y=latitude)])
     
-    if 'time' in var_dims:
-        if time_index>= var_sizes['time']:
-            raise IndexError('TIme index out of bounds')
+    elif variable == 'SoilTemp_inst': # if user select soil temperature
+       fig = go.Figure(data=[go.Heatmap(z = selected_var.isel(time = time_index, SoilTemp_profiles = int(profile_index)), x=longitude, y=latitude)])
 
-    # when user select soil moisture
-    if 'SoilMoist_profiles' in dataset[variable].dims:
-        print(f"SoilMoist_profiles is a dimension. Profile index: {profile_index}")
-        try:
-            selected_var = dataset[variable].isel(SoilMoist_profiles=profile_index)
-            selected_data = selected_var.isel(time=time_index)
-        
-        except KeyError as e:
-            print(f"KeyError encountered: {e}")
-
-        fig = go.Figure(data=[go.Heatmap(
-            z=selected_data.values,
-            x=longitude, y=latitude
-        )])
-        #return fig
-
-
-    # if variable == 'SoilMoist_inst':
-        #print(variable)
-        #selected_var = SoilMoist_inst
-        #fig = go.Figure(data=[go.Heatmap(z = selected_var.isel(time = time_index, SoilMoist_profiles = profile_index),  x=longitude, y=latitude)])
-    
-    # if user select soil temperature
-    # if variable == 'SoilTemp_inst':
-        #print(ds[variable])
-        #selected_var = ds[variable].isel(SoilTemp_profiles = profile_index)
-        #fig = go.Figure(data=[go.Heatmap(z = selected_var.isel(time = time_index),  x=longitude, y=latitude)])
-    
-    # when user select any other variables
-    else: 
-        selected_var = dataset[variable]
+    else:  # when user select any other variables 
         fig = go.Figure(data=[go.Heatmap(z = selected_var.isel(time = time_index),  x=longitude, y=latitude)])
     
     # Add titles and labels
