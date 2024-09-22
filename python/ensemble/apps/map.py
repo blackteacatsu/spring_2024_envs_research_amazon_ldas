@@ -11,7 +11,8 @@ app = Dash(__name__)
 
 # %%
 # Incorporate data
-data_location = r"C:\Users\Kris\Documents\amazonforcast\data\prakrut\output\LIS_HIST_Forecast_June_02_to_05_mean.nc"
+# data_location = r"C:\Users\Kris\Documents\amazonforcast\data\prakrut\output\LIS_HIST_Forecast_June_02_to_05_mean.nc"
+data_location = "/Users/kris/amazonforcast/data/forecast/combined_mean.nc"
 dataset = xr.open_dataset(data_location)
 
 # %%
@@ -89,4 +90,4 @@ def update_graph(time_index, variable, profile_index):
 # %%
 # Run the app
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=8000)
