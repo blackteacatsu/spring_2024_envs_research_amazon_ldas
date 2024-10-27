@@ -1,4 +1,5 @@
 from dash import Dash, html, dash_table, dcc, callback, Output, Input
+import dash_bootstrap_components as dbc
 import xarray as xr
 import plotly.graph_objects as go
 import plotly.express as px
@@ -18,15 +19,25 @@ hybas_sa_lev05 = gpd.read_file(hydrobasins_lev05_url)
 with urllib.request.urlopen(hydrobasins_lev05_url) as url:
         jdata = json.loads(url.read().decode())
 
-# Incorporate data
-# Here I am using the averaged ensemble value between June 02 to 05
-data_location = r'C:\Users\Kris\Documents\amazonforcast\data\prakrut\output\LIS_HIST_Forecast_June_02_to_05_mean.nc'
-# data_location = '/Users/kris/amazonforcast/data/202301/LIS_HIST_2023_Jan.nc'
-dataset = xr.open_dataset(data_location)
-longitude = dataset.east_west
-latitude = dataset.north_south
+"""Incorporate dateset"""
 
-time = dataset['time']
+# ensemble_avg_dataset_location = r'C:\Users\Kris\Documents\amazonforcast\data\prakrut\output\LIS_HIST_Forecast_June_02_to_05_mean.nc'
+# ensemble_avg_dataset_location = '/Users/kris/amazonforcast/data/202301/LIS_HIST_2023_Jan.nc'
+
+# The original nc dataset that contains the 7-ensemble members of our predictions
+ensemble_members_dataset_location = '/Users/kris/amazonforcast/data/forecast/output/LIS_HIST_Forecast_June_02_to_05.nc'
+
+# The nc dataset that contains the average values across the 7-ensemble members in the original dataset
+ensemble_avg_dataset_location = '/Users/kris/amazonforcast/data/forecast/output/LIS_HIST_Forecast_June_02_to_05_mean.nc'
+
+
+ensemble_avg_dataset = xr.open_dataset(ensemble_avg_dataset_location)
+ensemble_members_dataset = xr.open_dataset(ensemble_members_dataset_location)
+
+longitude = ensemble_avg_dataset.east_west
+latitude = ensemble_avg_dataset.north_south
+
+time = ensemble_avg_dataset['time']
 
 # Create a function to format the datetime values
 def format_date(datetime_value):
@@ -38,6 +49,7 @@ list_of_variables = ['Rainf_tavg', 'Qair_f_tavg',
                      'Qs_tavg','Evap_tavg',
                      'SoilMoist_inst', 'SoilTemp_inst'] 
 
+# app interface design
 app.layout = html.Div([
     html.H1(children='Mapping - Forecast Data'),
     html.Hr(),
@@ -53,7 +65,7 @@ app.layout = html.Div([
     ),
     html.Hr(),
     html.Div(id='selected-pfaf-id', style={'fontSize': 20, 'marginTop': '20px'}),
-    dcc.Graph(id='map'), dcc.Graph(id='boxplot'),
+    html.Div(dcc.Graph(id='map'), style={'display':'inline block'}), html.Div(dcc.Graph(id='boxplot'), style={'display':'inline block'})
 
 ])
 
@@ -65,12 +77,13 @@ app.layout = html.Div([
 )
 
 def update_graph(time_index, variable, profile_index):
-    # Print statements for debugging purposes
+
+    """Print statements for debugging:"""
     ## print(f'selected variable is {variable}')
     ## print(f'Time Index: {time_index}, Profile Index: {profile_index}')
-    ## print(f'Dimensions of selected variable{dataset[variable].dims}')
+    ## print(f'Dimensions of selected variable{ensemble_avg_dataset[variable].dims}')
 
-    selected_var = dataset[variable]
+    selected_var = ensemble_avg_dataset[variable]
     if variable == 'SoilMoist_inst': # if user select soil moisture
          fig = go.Figure(data=[go.Heatmap(z = selected_var.isel(time = time_index, SoilMoist_profiles = int(profile_index)),  x=longitude, y=latitude)])
     
@@ -137,14 +150,14 @@ def update_graph(time_index, variable, profile_index):
     Input(component_id='var-selector', component_property='value'),
 )
 
-def select_region(click_data, variable):
+def select_region(click_data, variable, ):
     #print(click_data)
     if click_data and 'points' in click_data:
         # Extract the PFAF_ID from the 'text' field in click data
         pfaf_id = int(click_data['points'][0]['text'])
 
     else:
-        pfaf_id = 61581
+        pfaf_id = 61581 # display 61581 as default 
     
     aoi = hybas_sa_lev05[hybas_sa_lev05.PFAF_ID == pfaf_id]
     
@@ -155,15 +168,20 @@ def select_region(click_data, variable):
                                             latitude)
     
     # Apply the mask we just made using the shapefile to the raster layer we made
-    aoi_ds = dataset[variable].where(aoi_mask)
+    aoi_ds = ensemble_members_dataset[variable].where(aoi_mask)
     summary = aoi_ds.groupby("time").mean(["north_south", "east_west"])
+    #print(summary)
     aoi_ds_summary = summary.to_dataframe().reset_index()
+    # Ensure that 'time' is converted to string format before plotting
+    aoi_ds_summary['time'] = aoi_ds_summary['time'].astype(str)
 
+    # Call plotly function
     boxplot = px.box(aoi_ds_summary, y = variable, x = 'time', color='time')
     boxplot.update_layout(title=f'{variable} of Region (PFAF-ID) {pfaf_id}', height = 600, width = 800)
-
     
     return boxplot
+
+## prob output: high chance in extreme event
 
 # Run the app
 if __name__ == '__main__':
